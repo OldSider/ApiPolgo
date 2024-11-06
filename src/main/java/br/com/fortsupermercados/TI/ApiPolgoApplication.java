@@ -1,24 +1,23 @@
 package br.com.fortsupermercados.TI;
 
+import br.com.fortsupermercados.TI.services.AuthService;
+import br.com.fortsupermercados.TI.services.EnvioDoc;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
-import br.com.fortsupermercados.TI.services.AuthService;
 
 @SpringBootApplication
 public class ApiPolgoApplication {
 
 	public static void main(String[] args) {
-		// Inicia o contexto da aplicação Spring
 		ApplicationContext context = SpringApplication.run(ApiPolgoApplication.class, args);
 
-		// Obtém o bean AuthService do contexto
+		// Autenticar e obter o token
 		AuthService authService = context.getBean(AuthService.class);
-
-		// Chama o método authenticate para realizar a autenticação
 		authService.authenticate();
 
-		// Obtém o token
-		String token = authService.getToken();
+		// Enviar os documentos
+		EnvioDoc envioDoc = context.getBean(EnvioDoc.class);
+		envioDoc.sendDocuments();
 	}
 }
