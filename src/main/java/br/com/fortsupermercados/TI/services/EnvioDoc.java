@@ -96,6 +96,23 @@ public class EnvioDoc {
                 // Se o CPF do cliente estiver vazio, gerar um CPF
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
                     cpfCliente = CPFGenerator.generateCPF();
+                    if (row.get("CNPJ").toString().equals("3")) {
+                        cnpj = "22826076000103";
+                    } else if (row.get("CNPJ").toString().equals("15")) {
+                        cnpj = "28950902000108";
+                    } else if (row.get("CNPJ").toString().equals("25")) {
+                        cnpj = "19629293000107";
+                    } else if (row.get("CNPJ").toString().equals("35")) {
+                        cnpj = "31009409000100";
+                    } else if(row.get("CNPJ").toString().equals("9")){
+                        cnpj = "28977571000108";
+                    } else if(row.get("CNPJ").toString().equals("10")){
+                        cnpj = "23306904000145";
+                    } else if (row.get("CNPJ").toString().equals("1")){
+                        cnpj = "46997642000108";
+                    } else if (row.get("CNPJ").toString().equals("40")){
+                        cnpj = "50225211000109";
+                    }
                 }
 
                 // Formatar a data
