@@ -92,6 +92,8 @@ public class EnvioDoc {
                 Integer empresa = ((Number) row.get("EMPRESA")).intValue();
                 String cnpj = (String) row.get("CNPJ");
                 String doc = (String) row.get("DOC");
+                String campanhaPolgo = "FORTNATAL24";
+                int ano = 2024;
 
                 // Se o CPF do cliente estiver vazio, gerar um CPF
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
@@ -108,6 +110,15 @@ public class EnvioDoc {
                 requestBody.put("dataHoraEmissao", dataHoraEmissao);
                 requestBody.put("valorTotal", vlrTotal);
                 requestBody.put("cnpjEmitente", cnpj);
+
+                 // Criar o objeto 'campanha' com os valores fornecidos
+                Map<String, Object> campanha = new HashMap<>();
+                campanha.put("identificacao", campanhaPolgo); // Valor fornecido para 'identificacao'
+                campanha.put("ano", ano); // Valor fornecido para 'ano'
+
+                // Adicionar o objeto 'campanha' ao 'requestBody'
+                requestBody.put("campanha", campanha);
+
 
                 // Converter o corpo em JSON
                 String requestJson = objectMapper.writeValueAsString(requestBody);
