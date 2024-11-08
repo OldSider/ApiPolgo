@@ -95,7 +95,7 @@ public class EnvioDoc {
                 String campanhaPolgo = "FORTNATAL24";
                 int ano = 2024;
 
-                // Se o CPF do cliente estiver vazio, gerar um CPF
+                // Se o CPF do cliente estiver vazio
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
                     cpfCliente = CPFGenerator.generateCPF();
                 }
