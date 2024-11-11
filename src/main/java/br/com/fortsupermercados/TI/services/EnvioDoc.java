@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -34,6 +35,7 @@ public class EnvioDoc {
     @Autowired
     private EnvioDocLogRepository envioDocLogRepository;
 
+    @Scheduled(fixedRate = 1800000)
     public void sendDocuments() {
         // Exibir mensagem no início
         System.out.println("O envio está sendo executado");
@@ -44,6 +46,34 @@ public class EnvioDoc {
         }
 
         String token = authService.getToken();
+
+        String dataHora = null;
+        String dataHoraEmissaoFormatada = null;
+
+        // Consulta para pegar a última DATAHORAEMISSAO
+        String slqData = "SELECT JSON_VALUE(REQUEST_JSON, '$.dataHoraEmissao') AS dataHora " +
+                         "FROM testes_integracao_campanha_natal " +
+                         "WHERE STATUS != 500 " +
+                         "ORDER BY dataHora DESC FETCH FIRST 1 ROW ONLY";
+
+        try {
+            // Executa a consulta e obtém o valor diretamente
+            dataHora = jdbcTemplate.queryForObject(slqData, String.class);
+
+            // Converte a String para Timestamp
+            Timestamp timestamp = Timestamp.valueOf(dataHora);
+
+            // Converte o Timestamp para Date (java.util.Date)
+            Date date = new Date(timestamp.getTime());
+
+            // Formata a data para o formato desejado
+            dataHoraEmissaoFormatada = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(date);
+
+            // Exibe a data formatada
+            System.out.println("Data formatada: " + dataHoraEmissaoFormatada);
+        } catch (Exception e) {
+            System.out.println("Erro ao obter DATAHORAEMISSAO: " + e.getMessage());
+        }
 
         String sql = "SELECT " +
                 "    SUM(vlrtotal) AS VLRTOTAL, " +
@@ -57,13 +87,15 @@ public class EnvioDoc {
                 "FROM " +
                 "    consincomonitor.tb_doctoitem a " +
                 "JOIN " +
-                "    consincomonitor.tb_doctocupom b ON b.seqdocto = a.seqdocto " +
+                "    consincomonitor.tb_doctocupom b " +
+                "    ON b.seqdocto = a.seqdocto " +
                 "    AND a.nrocheckout = b.nrocheckout " +
                 "    AND B.NROEMPRESA = A.NROEMPRESA " +
+                "    AND a.SEQDOCTO = c.SEQPESSOA " +
                 "JOIN " +
                 "    ge_pessoa c ON c.seqpessoa = a.nroempresa " +
                 "WHERE " +
-                "    TRUNC(a.dtahoremissao) = TO_DATE('06/11/2024', 'DD/MM/yyyy') " +
+                "    a.dtahoremissao > TO_DATE(?, 'DD/MM/YYYY HH24:MI:SS')" +
                 "    AND a.nroempresa IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,35,36,37,40,42,44) " +
                 "GROUP BY " +
                 "    a.seqdocto, " +
@@ -75,7 +107,7 @@ public class EnvioDoc {
                 "ORDER BY " +
                 "    DTAHOREMISSAO";
 
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, dataHoraEmissaoFormatada);
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -92,27 +124,31 @@ public class EnvioDoc {
                 Integer empresa = ((Number) row.get("EMPRESA")).intValue();
                 String cnpj = (String) row.get("CNPJ");
                 String doc = (String) row.get("DOC");
+                String campanhaPolgo = "FORTNATAL24";
+                int ano = 2024;
+                String nomerazao = (String) row.get("NOMERAZAO");
 
                 // Se o CPF do cliente estiver vazio, gerar um CPF
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
                     cpfCliente = CPFGenerator.generateCPF();
-                    if (row.get("CNPJ").toString().equals("3")) {
-                        cnpj = "22826076000103";
-                    } else if (row.get("CNPJ").toString().equals("15")) {
-                        cnpj = "28950902000108";
-                    } else if (row.get("CNPJ").toString().equals("25")) {
-                        cnpj = "19629293000107";
-                    } else if (row.get("CNPJ").toString().equals("35")) {
-                        cnpj = "31009409000100";
-                    } else if(row.get("CNPJ").toString().equals("9")){
-                        cnpj = "28977571000108";
-                    } else if(row.get("CNPJ").toString().equals("10")){
-                        cnpj = "23306904000145";
-                    } else if (row.get("CNPJ").toString().equals("1")){
-                        cnpj = "46997642000108";
-                    } else if (row.get("CNPJ").toString().equals("40")){
-                        cnpj = "50225211000109";
-                    }
+                }
+
+                if (row.get("EMPRESA").toString().equals("3")) {
+                    cnpj = "22826076000103";
+                } else if (row.get("EMPRESA").toString().equals("15")) {
+                    cnpj = "28950902000108";
+                } else if (row.get("EMPRESA").toString().equals("25")) {
+                    cnpj = "19629293000107";
+                } else if (row.get("EMPRESA").toString().equals("35")) {
+                    cnpj = "31009409000100";
+                } else if (row.get("EMPRESA").toString().equals("9")) {
+                    cnpj = "28977571000108";
+                } else if (row.get("EMPRESA").toString().equals("10")) {
+                    cnpj = "23306904000145";
+                } else if (row.get("EMPRESA").toString().equals("1")) {
+                    cnpj = "46997642000108";
+                } else if (row.get("EMPRESA").toString().equals("40")) {
+                    cnpj = "50225211000109";
                 }
 
                 // Formatar a data
@@ -121,10 +157,20 @@ public class EnvioDoc {
                 // Construir o corpo da requisição
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("usuario", cpfCliente);
-                requestBody.put("numeroDocumento", doc);
+                requestBody.put("numeroDocumento", doc + dataHoraEmissaoFormatada);
                 requestBody.put("dataHoraEmissao", dataHoraEmissao);
                 requestBody.put("valorTotal", vlrTotal);
                 requestBody.put("cnpjEmitente", cnpj);
+
+                // Criar o objeto 'campanha' com os valores fornecidos
+                Map<String, Object> campanha = new HashMap<>();
+                campanha.put("identificacao", campanhaPolgo);
+                campanha.put("ano", ano);
+
+                // Adicionar o objeto 'campanha' ao 'requestBody'
+                requestBody.put("campanha", campanha);
+
+
 
                 // Converter o corpo em JSON
                 String requestJson = objectMapper.writeValueAsString(requestBody);
