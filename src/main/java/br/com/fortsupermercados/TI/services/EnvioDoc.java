@@ -105,7 +105,7 @@ public class EnvioDoc {
                 "ORDER BY " +
                 "    DTAHOREMISSAO";
 
-
+//
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, dataHoraEmissaoFormatada);
 
         RestTemplate restTemplate = new RestTemplate();
