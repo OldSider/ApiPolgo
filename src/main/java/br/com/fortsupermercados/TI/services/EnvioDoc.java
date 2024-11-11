@@ -35,7 +35,7 @@ public class EnvioDoc {
     @Autowired
     private EnvioDocLogRepository envioDocLogRepository;
 
-    //@Scheduled(fixedRate = 1200000)
+    @Scheduled(fixedRate = 1800000)
     public void sendDocuments() {
         // Exibir mensagem no início
         System.out.println("O envio está sendo executado");
@@ -51,13 +51,10 @@ public class EnvioDoc {
         String dataHoraEmissaoFormatada = null;
 
         // Consulta para pegar a última DATAHORAEMISSAO
-        String slqData = """
-        SELECT REGEXP_SUBSTR(DBMS_LOB.SUBSTR(REQUEST_JSON, 4000, 1), 'DTAHOREMISSAO=([^,}]+)', 1, 1, NULL, 1) AS DATAHORAEMISSAO
-        FROM testes_integracao_campanha_natal
-        WHERE REGEXP_LIKE(DBMS_LOB.SUBSTR(REQUEST_JSON, 4000, 1), 'DTAHOREMISSAO=[^,}]+')
-        ORDER BY TO_TIMESTAMP(REGEXP_SUBSTR(DBMS_LOB.SUBSTR(REQUEST_JSON, 4000, 1), 'DTAHOREMISSAO=([^,}]+)', 1, 1, NULL, 1), 'YYYY-MM-DD HH24:MI:SS.FF') DESC
-        FETCH FIRST 1 ROW ONLY
-    """;
+        String slqData = "SELECT JSON_VALUE(REQUEST_JSON, '$.dataHoraEmissao') AS dataHora " +
+                "FROM testes_integracao_campanha_natal " +
+                "WHERE STATUS != 500 " +
+                "ORDER BY dataHora DESC FETCH FIRST 1 ROW ONLY";
 
         try {
             // Executa a consulta e obtém o valor diretamente
@@ -108,12 +105,13 @@ public class EnvioDoc {
                 "ORDER BY " +
                 "    DTAHOREMISSAO";
 
+
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, dataHoraEmissaoFormatada);
 
         RestTemplate restTemplate = new RestTemplate();
 
         ObjectMapper objectMapper = new ObjectMapper();
-
+        // apagar
         for (Map<String, Object> row : rows) {
             try {
                 // Extrair os dados
@@ -127,28 +125,29 @@ public class EnvioDoc {
                 String doc = (String) row.get("DOC");
                 String campanhaPolgo = "FORTNATAL24";
                 int ano = 2024;
+                String nomerazao = (String) row.get("NOMERAZAO");
 
                 // Se o CPF do cliente estiver vazio, gerar um CPF
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
                     cpfCliente = CPFGenerator.generateCPF();
+                }
 
-                    if (row.get("CNPJ").toString().equals("3")) {
-                        cnpj = "22826076000103";
-                    } else if (row.get("CNPJ").toString().equals("15")) {
-                        cnpj = "28950902000108";
-                    } else if (row.get("CNPJ").toString().equals("25")) {
-                        cnpj = "19629293000107";
-                    } else if (row.get("CNPJ").toString().equals("35")) {
-                        cnpj = "31009409000100";
-                    } else if (row.get("CNPJ").toString().equals("9")) {
-                        cnpj = "28977571000108";
-                    } else if (row.get("CNPJ").toString().equals("10")) {
-                        cnpj = "23306904000145";
-                    } else if (row.get("CNPJ").toString().equals("1")) {
-                        cnpj = "46997642000108";
-                    } else if (row.get("CNPJ").toString().equals("40")) {
-                        cnpj = "50225211000109";
-                    }
+                if (row.get("EMPRESA").toString().equals("3")) {
+                    cnpj = "22826076000103";
+                } else if (row.get("EMPRESA").toString().equals("15")) {
+                    cnpj = "28950902000108";
+                } else if (row.get("EMPRESA").toString().equals("25")) {
+                    cnpj = "19629293000107";
+                } else if (row.get("EMPRESA").toString().equals("35")) {
+                    cnpj = "31009409000100";
+                } else if (row.get("EMPRESA").toString().equals("9")) {
+                    cnpj = "28977571000108";
+                } else if (row.get("EMPRESA").toString().equals("10")) {
+                    cnpj = "23306904000145";
+                } else if (row.get("EMPRESA").toString().equals("1")) {
+                    cnpj = "46997642000108";
+                } else if (row.get("EMPRESA").toString().equals("40")) {
+                    cnpj = "50225211000109";
                 }
 
                 // Formatar a data
@@ -157,7 +156,7 @@ public class EnvioDoc {
                 // Construir o corpo da requisição
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("usuario", cpfCliente);
-                requestBody.put("numeroDocumento", doc);
+                requestBody.put("numeroDocumento", doc + dataHoraEmissaoFormatada);
                 requestBody.put("dataHoraEmissao", dataHoraEmissao);
                 requestBody.put("valorTotal", vlrTotal);
                 requestBody.put("cnpjEmitente", cnpj);
@@ -169,6 +168,13 @@ public class EnvioDoc {
 
                 // Adicionar o objeto 'campanha' ao 'requestBody'
                 requestBody.put("campanha", campanha);
+
+                // Criar o objeto 'vendedor' com os valores fornecidos
+                Map<String, Object> vendedor = new HashMap<>();
+                vendedor.put("codigo", seqDocto);
+                vendedor.put("nome", nomerazao);
+
+                requestBody.put("vendedor", vendedor);
 
                 // Converter o corpo em JSON
                 String requestJson = objectMapper.writeValueAsString(requestBody);
