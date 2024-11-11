@@ -76,34 +76,46 @@ public class EnvioDoc {
         }
 
         String sql = "SELECT " +
-                "    SUM(vlrtotal) AS VLRTOTAL, " +
+                "    SUM(a.vlrtotal) AS VLRTOTAL, " +
                 "    a.seqdocto, " +
-                "    MAX(dtahoremissao) AS DTAHOREMISSAO, " +
-                "    B.cnpjcpf AS CPFCLIENTE, " +
-                "    A.NROCHECKOUT AS PDV, " +
-                "    A.nroempresa AS EMPRESA, " +
-                "    (c.nrocgccpf || c.DIGCGCCPF) AS CNPJ, " +
-                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf) AS DOC " +
+                "    MAX(a.dtahoremissao) AS DTAHOREMISSAO, " +
+                "    b.cnpjcpf AS CPFCLIENTE, " +
+                "    a.nrocheckout AS PDV, " +
+                "    a.nroempresa AS EMPRESA, " +
+                "    (c.nrocgccpf || c.digcgccpf) AS CNPJ, " +
+                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf) AS DOC," +
+                "    c.nomerazao AS NOMERAZAO_EMPRESA," +
+                "    e.nomerazao AS NOMERAZAO_USUARIO," +
+                "    d.sequsuario AS SEQUSUARIO" +
                 "FROM " +
-                "    consincomonitor.tb_doctoitem a " +
+                "    consincomonitor.tb_doctoitem a" +
                 "JOIN " +
                 "    consincomonitor.tb_doctocupom b ON b.seqdocto = a.seqdocto " +
                 "    AND a.nrocheckout = b.nrocheckout " +
-                "    AND B.NROEMPRESA = A.NROEMPRESA " +
+                "    AND b.nroempresa = a.nroempresa" +
                 "JOIN " +
-                "    ge_pessoa c ON c.seqpessoa = a.nroempresa " +
+                "    ge_pessoa c ON c.seqpessoa = a.nroempresa" +
+                "JOIN " +
+                "    consincomonitor.tb_docto d ON a.nroempresa = d.nroempresa " +
+                "    AND a.nrocheckout = d.nrocheckout " +
+                "    AND a.seqdocto = d.seqdocto" +
+                "JOIN " +
+                "    ge_pessoa e ON e.seqpessoa = d.sequsuario" +
                 "WHERE " +
-                "    a.dtahoremissao > TO_DATE(?, 'DD/MM/YYYY HH24:MI:SS')" +
-                "    AND a.nroempresa IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,35,36,37,40,42,44) " +
+                "    a.dtahoremissao > TO_DATE('06/11/2024', 'DD/MM/YYYY')" +
+                "    AND a.nroempresa IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,35,36,37,40,42,44)" +
                 "GROUP BY " +
                 "    a.seqdocto, " +
                 "    b.cnpjcpf, " +
-                "    A.NROCHECKOUT, " +
-                "    A.nroempresa, " +
-                "    (c.nrocgccpf || c.DIGCGCCPF), " +
-                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf) " +
+                "    a.nrocheckout, " +
+                "    a.nroempresa, " +
+                "    (c.nrocgccpf || c.digcgccpf), " +
+                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf)," +
+                "    c.nomerazao," +
+                "    e.nomerazao," +
+                "    d.sequsuario" +
                 "ORDER BY " +
-                "    DTAHOREMISSAO";
+                "    DTAHOREMISSAO;";
 
 //
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, dataHoraEmissaoFormatada);
