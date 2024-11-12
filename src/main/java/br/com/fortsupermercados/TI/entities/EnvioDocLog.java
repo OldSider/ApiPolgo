@@ -25,6 +25,12 @@ public class EnvioDocLog {
     @Temporal(TemporalType.TIMESTAMP)
     private Date dateTime;
 
+    @Column
+    private Date horarioInicio;
+
+    @Column
+    private Date horarioFim;
+
     // Construtores
 
     public EnvioDocLog() {
@@ -67,5 +73,21 @@ public class EnvioDocLog {
 
     public void setDateTime(Date dateTime) {
         this.dateTime = dateTime;
+    }
+
+    public Date getHorarioInicio() {
+        return horarioInicio;
+    }
+
+    public void setHorarioInicio(Date horarioInicio) {
+        this.horarioInicio = horarioInicio;
+    }
+
+    public Date getHorarioFim() {
+        return horarioFim;
+    }
+
+    public void setHorarioFim(Date horarioFim) {
+        this.horarioFim = horarioFim;
     }
 }

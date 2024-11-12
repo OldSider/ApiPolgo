@@ -15,6 +15,10 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -35,10 +39,12 @@ public class EnvioDoc {
     @Autowired
     private EnvioDocLogRepository envioDocLogRepository;
 
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 600000)
     public void sendDocuments() {
+        LocalDateTime inicio = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         // Exibir mensagem no início
-        System.out.println("O envio está sendo executado");
+        System.out.println("O envio está sendo executado as: " + inicio.format(formatter));
 
         // Certifica-se de que o token está disponível
         if (authService.getToken() == null) {
@@ -82,53 +88,53 @@ public class EnvioDoc {
                 "    b.cnpjcpf AS CPFCLIENTE, " +
                 "    a.nrocheckout AS PDV, " +
                 "    a.nroempresa AS EMPRESA, " +
-                "    (c.nrocgccpf || c.digcgccpf) AS CNPJ, " +
-                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf) AS DOC," +
-                "    c.nomerazao AS NOMERAZAO_EMPRESA," +
-                "    e.nomerazao AS NOMERAZAO_USUARIO," +
-                "    d.sequsuario AS SEQUSUARIO" +
+                "    (c.nrocgccpf || c.digcgccpf) AS CNPJ,  " +
+                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf) AS DOC, " +
+                "    c.nomerazao AS EMPRESARAZAO, " +
+                "    e.nomerazao AS NOMERAZAO, " +
+                "    d.sequsuario AS SEQUSUARIO, " +
+                "    COUNT(a.QUANTIDADE) AS QUANTIDADETOTAL " +
                 "FROM " +
-                "    consincomonitor.tb_doctoitem a" +
+                "    consincomonitor.tb_doctoitem a " +
                 "JOIN " +
                 "    consincomonitor.tb_doctocupom b ON b.seqdocto = a.seqdocto " +
-                "    AND a.nrocheckout = b.nrocheckout " +
-                "    AND b.nroempresa = a.nroempresa" +
-                "JOIN " +
-                "    ge_pessoa c ON c.seqpessoa = a.nroempresa" +
-                "JOIN " +
-                "    consincomonitor.tb_docto d ON a.nroempresa = d.nroempresa " +
-                "    AND a.nrocheckout = d.nrocheckout " +
-                "    AND a.seqdocto = d.seqdocto" +
-                "JOIN " +
-                "    ge_pessoa e ON e.seqpessoa = d.sequsuario" +
+                "    AND a.nrocheckout = b.nrocheckout  " +
+                "    AND b.nroempresa = a.nroempresa " +
+                "JOIN  " +
+                "    ge_pessoa c ON c.seqpessoa = a.nroempresa " +
+                "JOIN  " +
+                "    consincomonitor.tb_docto d ON a.nroempresa = d.nroempresa  " +
+                "    AND a.nrocheckout = d.nrocheckout  " +
+                "    AND a.seqdocto = d.seqdocto " +
+                "JOIN  " +
+                "    ge_pessoa e ON e.seqpessoa = d.sequsuario " +
                 "WHERE " +
-                "    a.dtahoremissao > TO_DATE('06/11/2024', 'DD/MM/YYYY')" +
-                "    AND a.nroempresa IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,35,36,37,40,42,44)" +
+                "    a.dtahoremissao > TO_DATE(?, 'DD/MM/YYYY HH24:MI:SS') " +
+                "    AND a.nroempresa IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,35,36,37,40,42,44) " +
                 "GROUP BY " +
                 "    a.seqdocto, " +
                 "    b.cnpjcpf, " +
                 "    a.nrocheckout, " +
                 "    a.nroempresa, " +
                 "    (c.nrocgccpf || c.digcgccpf), " +
-                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf)," +
-                "    c.nomerazao," +
-                "    e.nomerazao," +
-                "    d.sequsuario" +
+                "    (a.seqdocto || a.nrocheckout || c.nrocgccpf || b.cnpjcpf), " +
+                "    c.nomerazao, " +
+                "    e.nomerazao, " +
+                "    d.sequsuario " +
                 "ORDER BY " +
-                "    DTAHOREMISSAO;";
+                "    DTAHOREMISSAO";
 
-//
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, dataHoraEmissaoFormatada);
 
         RestTemplate restTemplate = new RestTemplate();
 
         ObjectMapper objectMapper = new ObjectMapper();
-        // apagar
+
         for (Map<String, Object> row : rows) {
             try {
                 // Extrair os dados
                 BigDecimal vlrTotal = (BigDecimal) row.get("VLRTOTAL");
-                Long seqDocto = ((Number) row.get("SEQDOCTO")).longValue();
+                int seqDocto = ((Number) row.get("SEQDOCTO")).intValue();
                 Timestamp dtahorEmissao = (Timestamp) row.get("DTAHOREMISSAO");
                 String cpfCliente = (String) row.get("CPFCLIENTE");
                 Integer pdv = ((Number) row.get("PDV")).intValue();
@@ -138,6 +144,8 @@ public class EnvioDoc {
                 String campanhaPolgo = "FORTNATAL24";
                 int ano = 2024;
                 String nomerazao = (String) row.get("NOMERAZAO");
+                String nomeempresa = (String) row.get("EMPRESARAZAO");
+                int quantidadetotal = ((Number) row.get("QUANTIDADETOTAL")).intValue();
 
                 // Se o CPF do cliente estiver vazio, gerar um CPF
                 if (cpfCliente == null || cpfCliente.trim().isEmpty()) {
@@ -165,9 +173,11 @@ public class EnvioDoc {
                 // Formatar a data
                 String dataHoraEmissao = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(dtahorEmissao);
 
+                String quantidadeTotalString = String.valueOf(quantidadetotal);
                 // Construir o corpo da requisição
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("usuario", cpfCliente);
+                requestBody.put("extra", quantidadeTotalString);
                 requestBody.put("numeroDocumento", doc + dataHoraEmissaoFormatada);
                 requestBody.put("dataHoraEmissao", dataHoraEmissao);
                 requestBody.put("valorTotal", vlrTotal);
@@ -182,8 +192,9 @@ public class EnvioDoc {
                 requestBody.put("campanha", campanha);
 
                 // Criar o objeto 'vendedor' com os valores fornecidos
+                String seqDoctorString = String.valueOf(seqDocto);
                 Map<String, Object> vendedor = new HashMap<>();
-                vendedor.put("codigo", seqDocto);
+                vendedor.put("codigo", seqDoctorString);
                 vendedor.put("nome", nomerazao);
 
                 requestBody.put("vendedor", vendedor);
@@ -208,16 +219,30 @@ public class EnvioDoc {
                 // Enviar a requisição
                 ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
+                // Obtém o horário de término
+                LocalDateTime fim = LocalDateTime.now();
+                //Converter as variaves LocalDateTime para Date
+                Date dateFim = Date.from(fim.atZone(ZoneId.systemDefault()).toInstant());
+                Date dateInicio = Date.from(inicio.atZone(ZoneId.systemDefault()).toInstant());
+
                 // Registrar o log
                 EnvioDocLog log = new EnvioDocLog();
                 log.setRequestJson(requestJson);
                 log.setResponseJson(response.getBody());
                 log.setStatus(response.getStatusCodeValue());
                 log.setDateTime(new Date());
+                log.setHorarioInicio(dateInicio);
+                log.setHorarioFim(dateFim);
 
                 envioDocLogRepository.save(log);
 
                 System.out.println("Documento enviado com sucesso: " + doc);
+                System.out.println("Horario final: " + fim.format(formatter));
+
+                // Calcula a duração entre inicio e fim
+                Duration duracao = Duration.between(inicio, fim);
+                // Adiciona a duração ao momento inicial para ter o "soma" dos tempos
+                LocalDateTime somaDosTempos = inicio.plus(duracao);
 
             } catch (Exception e) {
                 // Em caso de erro, registrar o log
@@ -226,6 +251,7 @@ public class EnvioDoc {
                 log.setResponseJson(e.getMessage());
                 log.setStatus(500);
                 log.setDateTime(new Date());
+
 
                 envioDocLogRepository.save(log);
 

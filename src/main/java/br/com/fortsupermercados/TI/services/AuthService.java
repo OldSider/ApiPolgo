@@ -14,7 +14,7 @@ public class AuthService {
 
     @Value("${url.base}")
     private String baseUrl;
-//
+
     @Value("${auth.endpoint}")
     private String authEndpoint;
 
@@ -26,7 +26,7 @@ public class AuthService {
 
     private String token;
 
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 600000)
     public void authenticate() {
         String url = baseUrl + authEndpoint;
 
