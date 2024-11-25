@@ -5,19 +5,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
+
 import java.util.Date;
 
 @Entity
 @Data // Getter e Setter
 @NoArgsConstructor // Constructor sem argumentos
 @AllArgsConstructor // Contructor com argumentos
-@Table(name = "testes_integracao_campanha_natal")
-public class EnvioDocLog {
+@Table(name = "testes_ti_natal_clientes")
+public class EnvioClienteLog {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "uuid2")
-    @Column(name = "uuid", updatable = false, nullable = false)
     private String uuid;
 
     @Column(columnDefinition = "CLOB")
@@ -36,4 +34,6 @@ public class EnvioDocLog {
 
     @Column
     private Date horarioFim;
+
 }
+

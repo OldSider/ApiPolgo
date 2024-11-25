@@ -26,7 +26,7 @@ public class AuthService {
 
     private String token;
 
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 900000)
     public void authenticate() {
         String url = baseUrl + authEndpoint;
 
